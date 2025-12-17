@@ -1,14 +1,18 @@
-name: charmed-valkey # you probably want to 'snapcraft register <name>'
-base: core24 # the base snap is the execution environment for this snap
-version: '7.2.11' # just for humans, typically '1.2+git' or '1.3.2'
+name: charmed-valkey
+base: core26
+build-base: devel # can be removed once 26.04 was released to `stable`
+version: '9.0.1'
 summary: 'Valkey: open source, in memory datastore as a snap' # 79 char long summary
 description: |
-  Valkey is an open source, in memory datastore released under 
-  the BSD-3 Clause License. It is a continuation of the work 
-  that was being done on Redis 7.2.4.
+  A flexible distributed key-value database that is optimized 
+  for caching and other realtime workloads. Valkey is an open 
+  source, in memory datastore released under the BSD-3 Clause License.
 
 grade: devel # must be 'stable' to release into candidate/stable channels
 confinement: strict # use 'strict' once you have the right plugs and slots
+platforms:
+  amd64:
+  arm64:
 
 apps:
   server:
@@ -62,8 +66,13 @@ apps:
 
 parts:
   valkey:
-    plugin: nil
-    stage-packages:
-      - valkey-server
-      - valkey-sentinel
-      - valkey-tools
+    plugin: make
+    source: https://git.launchpad.net/valkey
+    source-type: git
+    source-tag: lp-9.0.1
+    override-build: |
+      mkdir -p ${SNAPCRAFT_PART_INSTALL}/usr
+      make BUILD_TLS=yes
+      PREFIX=${SNAPCRAFT_PART_INSTALL}/usr make BUILD_TLS=yes install
+    build-packages:
+      - libssl-dev
