@@ -1,0 +1,12 @@
+#!/bin/sh -e
+
+# create Valkey's working directory
+DATA="${SNAP_COMMON}"/var/lib/valkey
+mkdir -p "${DATA}"
+
+# If we just created the directory, we set up permissions
+if [ stat -c '%u' "${DATA}" == 0 ]; then
+    chmod -R 770 "${SNAP_COMMON}"
+fi
+
+chown -R 584788:584788 "${SNAP_COMMON}"/*

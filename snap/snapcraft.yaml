@@ -14,11 +14,16 @@ platforms:
   amd64:
   arm64:
 
+system-usernames:
+  snap_daemon: shared
+
 apps:
   server:
-    command: usr/bin/valkey-server
+    command: start_valkey.sh
     daemon: simple
+    install-mode: disable
     restart-condition: always
+    restart-delay: 20s
     environment:
       LANG: C.UTF-8
     plugs:
@@ -76,3 +81,9 @@ parts:
       PREFIX=${SNAPCRAFT_PART_INSTALL}/usr make BUILD_TLS=yes install
     build-packages:
       - libssl-dev
+    stage-packages:
+      - util-linux
+
+  wrapper:
+    plugin: dump
+    source: snap/local
