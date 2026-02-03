@@ -1,12 +1,22 @@
 #!/bin/sh -e
 
 # create Valkey's working directory
-DATA="${SNAP_COMMON}"/var/lib/valkey
+DATA="${SNAP_COMMON}"/var/lib/charmed-valkey
+CONF="${SNAP_DATA}"/etc/charmed-valkey
 mkdir -p "${DATA}"
+mkdir -p "${CONF}"
 
-# If we just created the directory, we set up permissions
+# add default config file
+cp "${SNAP}"/etc/valkey.conf "${CONF}"/
+
+# If we just created the directories, we set up permissions
 if [ stat -c '%u' "${DATA}" == 0 ]; then
     chmod -R 770 "${SNAP_COMMON}"
 fi
 
+if [ stat -c '%u' "${CONF}" == 0 ]; then
+    chmod -R 770 "${SNAP_DATA}"
+fi
+
 chown -R 584788:584788 "${SNAP_COMMON}"/*
+chown -R 584788:584788 "${SNAP_DATA}"/*

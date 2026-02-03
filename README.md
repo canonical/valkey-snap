@@ -5,7 +5,7 @@ This repository contains the packaging metadata for creating a snap of Valkey.
 For more information on snaps, visit [snapcraft.io](https://snapcraft.io/). 
 
 ## Installing the Snap
-The snap can be installed directly from the Stap Store.  Follow the link below for more information.
+The snap can be installed directly from the Snap Store.  Follow the link below for more information.
 <br>
 
 [![Get it from the Snap Store](https://snapcraft.io/static/images/badges/en/snap-store-black.svg)](https://snapcraft.io/charmed-valkey)

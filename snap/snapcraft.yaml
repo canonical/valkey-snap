@@ -77,8 +77,10 @@ parts:
     source-tag: lp-9.0.1
     override-build: |
       mkdir -p ${SNAPCRAFT_PART_INSTALL}/usr
+      mkdir -p ${SNAPCRAFT_PART_INSTALL}/etc
       make BUILD_TLS=yes
       PREFIX=${SNAPCRAFT_PART_INSTALL}/usr make BUILD_TLS=yes install
+      cp valkey.conf ${SNAPCRAFT_PART_INSTALL}/etc/
     build-packages:
       - libssl-dev
     stage-packages:
