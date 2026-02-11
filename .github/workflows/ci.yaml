@@ -45,3 +45,11 @@ jobs:
       - name: Run valkey cli
         run: |
           charmed-valkey.cli info
+
+      - name: Run valkey sentinel
+        run: |
+          sudo snap start charmed-valkey.sentinel
+          sleep 5
+      - name: Run valkey sentinel info
+        run: |
+          charmed-valkey.cli -p 26379 sentinel masters

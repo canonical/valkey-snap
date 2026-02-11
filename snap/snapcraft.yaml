@@ -1,8 +1,8 @@
 name: charmed-valkey
 base: core26
 build-base: devel # can be removed once 26.04 was released to `stable`
-version: '9.0.1'
-summary: 'Valkey: open source, in memory datastore as a snap' # 79 char long summary
+version: "9.0.1"
+summary: "Valkey: open source, in memory datastore as a snap" # 79 char long summary
 description: |
   A flexible distributed key-value database that is optimized 
   for caching and other realtime workloads. Valkey is an open 
@@ -60,7 +60,11 @@ apps:
       - network-observe
       - home
   sentinel:
-    command: usr/bin/valkey-sentinel
+    command: start_sentinel.sh
+    daemon: simple
+    install-mode: disable
+    restart-condition: always
+    restart-delay: 20s
     environment:
       LANG: C.UTF-8
     plugs:
@@ -81,6 +85,7 @@ parts:
       make BUILD_TLS=yes
       PREFIX=${SNAPCRAFT_PART_INSTALL}/usr make BUILD_TLS=yes install
       cp valkey.conf ${SNAPCRAFT_PART_INSTALL}/etc/
+      cp sentinel.conf ${SNAPCRAFT_PART_INSTALL}/etc/
     build-packages:
       - libssl-dev
     stage-packages:
