@@ -1,8 +1,8 @@
 #!/bin/sh -e
 
 # create Valkey's working directory
-DATA="${SNAP_COMMON}"/var/lib/charmed-valkey
-CONF="${SNAP_DATA}"/etc/charmed-valkey
+DATA="${SNAP_COMMON}"/var/lib/valkey
+CONF="${SNAP_DATA}"/etc/valkey
 mkdir -p "${DATA}"
 mkdir -p "${CONF}"
 

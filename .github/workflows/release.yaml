@@ -19,15 +19,15 @@ jobs:
     name: Build snap
     uses: canonical/data-platform-workflows/.github/workflows/build_snap.yaml@v40.0.2
 
-  release:
-    name: Release snap
-    needs:
-      - build
-    uses: canonical/data-platform-workflows/.github/workflows/release_snap.yaml@v40.0.2
-    with:
-      channel: 9/edge
-      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
-    secrets:
-      snap-store-token: ${{ secrets.SNAP_STORE_TOKEN }}
-    permissions:
-      contents: write  # Needed to create GitHub release
+#  release:
+#    name: Release snap
+#    needs:
+#      - build
+#    uses: canonical/data-platform-workflows/.github/workflows/release_snap.yaml@v40.0.2
+#    with:
+#      channel: 9/edge
+#      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
+#    secrets:
+#      snap-store-token: ${{ secrets.SNAP_STORE_TOKEN }}
+#    permissions:
+#      contents: write  # Needed to create GitHub release

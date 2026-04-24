@@ -1,4 +1,4 @@
-name: charmed-valkey
+name: valkey
 base: core26
 build-base: devel # can be removed once 26.04 was released to `stable`
 version: "9.0.1"
