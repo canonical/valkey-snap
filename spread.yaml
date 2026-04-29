@@ -1,0 +1,26 @@
+project: valkey-snap
+
+backends:
+  craft:
+    type: craft
+    systems:
+      - ubuntu-26.04
+
+suites:
+  spread/tests/:
+    summary: General integration tests
+    prepare: |
+      apt --purge remove valkey*
+      snap install snapd  # Ensure snapd 2.74 is installed
+      snap refresh snapd  # Ensure snapd 2.74 is installed
+      snap install core26 --beta # TODO: remove once core26 latest/stable is out
+    prepare-each: |
+      snap install "$CRAFT_ARTIFACT" --dangerous
+      snap start valkey.server
+    restore-each: |
+      snap remove valkey --purge --terminate
+
+exclude:
+  - .git
+
+kill-timeout: 1h
