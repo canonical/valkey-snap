@@ -1,0 +1,95 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: "Channel to release to"
+        required: true
+        default: "9.1-26.04/edge"
+  pull_request:
+  # # TODO ADD When ready to merge
+  # push:
+  #   branches:
+  #     - 9.0-26.04
+
+jobs:
+  release:
+    name: Release to ${{ inputs.channel }}
+    runs-on: ubuntu-26.04
+    env:
+      CHANNEL: ${{ inputs.channel || '9.1-26.04/edge' }}
+      CRAFT_SD_ENV: production
+      CRAFT_SOURCE_STORE_CREDENTIALS: ${{ secrets.CRAFT_SOURCE_STORE_CREDENTIALS }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        # TODO remove when ready to merge
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Install snapcraft
+        run: |
+          sudo snap install snapcraft --classic --channel=latest/beta
+          sudo snap install craft-sd --channel=latest/beta
+
+      - name: Commit to channel
+        id: commit
+        run: |
+          commit_sha="$(git rev-parse HEAD)"
+          output=$(snapcraft commit --channel "$CHANNEL" "$commit_sha" 2>&1) || true
+          echo "$output"
+          buildset_id=$(echo "$output" | grep -oP "(?<=--buildset-id )\S+")
+          if [ -z "$buildset_id" ]; then
+            echo "snapcraft commit failed — no buildset-id in output"
+            exit 1
+          fi
+          echo "buildset_id=$buildset_id" >> "$GITHUB_ENV"
+
+      - name: Poll buildset until complete
+        id: poll
+        run: |
+          echo "Tracking buildset $buildset_id on channel $CHANNEL"
+          while true; do
+            retries=0
+            until output=$(snapcraft buildsets --buildset-id "$buildset_id" --channel "$CHANNEL" 2>/tmp/buildsets_err.log); do
+              retries=$((retries + 1))
+              cat /tmp/buildsets_err.log
+              if [ $retries -ge 5 ]; then
+                echo "Failed to fetch buildset status after $retries attempts"
+                exit 1
+              fi
+              echo "Network error, retrying in 10s... ($retries/5)"
+              sleep 10
+            done
+            echo "$output"
+            statuses=$(echo "$output" | awk 'NR>1 && NF { print $9 }')
+            if echo "$statuses" | grep -qx 'failed\|error'; then
+              echo "Build failed"
+              exit 1
+            fi
+            if [ -n "$statuses" ] && ! echo "$statuses" | grep -qvx 'succeeded'; then
+              echo "All builds completed successfully"
+              break
+            fi
+            sleep 30
+          done
+
+      - name: Download buildset logs
+        if: failure() && steps.poll.outcome == 'failure'
+        run: |
+          snapcraft buildset-logs "$buildset_id" --download
+          echo "Downloaded log files:"
+          ls -la "${buildset_id}"*
+          echo "Log contents:"
+          cat "${buildset_id}"*
+
+      - name: Upload buildset logs
+        if: failure() && steps.poll.outcome == 'failure'
+        uses: actions/upload-artifact@v7
+        with:
+          name: buildset-logs-${{ env.buildset_id }}
+          path: "${{ env.buildset_id }}*"
+          if-no-files-found: warn

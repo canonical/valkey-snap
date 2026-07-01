@@ -1,0 +1,117 @@
+name: CI
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  collect-platforms:
+    name: Collect platforms from snapcraft.yaml
+    runs-on: ubuntu-26.04
+    outputs:
+      matrix: ${{ steps.get-platforms.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get platforms
+        id: get-platforms
+        run: |
+          platforms=$(yq '.platforms | keys | .[]' snap/snapcraft.yaml)
+          matrix='[]'
+          runner_for_amd64="ubuntu-26.04"
+          runner_for_arm64="ubuntu-26.04-arm"
+          for p in $platforms; do
+            runner_var="runner_for_${p//-/_}"
+            runner="${!runner_var:-ubuntu-26.04}"
+            matrix=$(echo "$matrix" | jq -c --arg p "$p" --arg r "$runner" '. + [{"platform": $p, "runner": $r}]')
+          done
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+  pack:
+    name: Pack (${{ matrix.platform }})
+    needs: collect-platforms
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.collect-platforms.outputs.matrix) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup the environment
+        run: |
+          sudo adduser "$USER" lxd
+          # `newgrp` does not work in GitHub Actions; use `sudo --user` instead
+          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- lxd waitready
+          sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- lxd init --auto
+          # Workaround for Docker & LXD on same machine
+          sudo iptables -F FORWARD
+          sudo iptables -P FORWARD ACCEPT
+
+          sudo snap install snapcraft --classic --channel=latest/beta
+          sudo snap install craft-sd --channel=latest/beta
+          sudo snap install bld --edge
+
+      - name: Run snapcraft pack
+        id: test
+        run: sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- CRAFT_SD_ENV=production snapcraft pack
+
+      - name: Snapcraft logs
+        if: ${{ success() || (failure() && steps.test.outcome == 'failure') }}
+        run: cat ~/.local/state/snapcraft/log/*
+
+      - name: Upload snap package
+        uses: actions/upload-artifact@v7
+        with:
+          name: valkey-snap--platform-${{ matrix.platform }}
+          path: "*.snap"
+          if-no-files-found: error
+
+  test:
+    name: Test snap (${{ matrix.platform }})
+    needs:
+      - collect-platforms
+      - pack
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.collect-platforms.outputs.matrix) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install core26
+        run: sudo snap install core26 --edge
+
+      - name: Download snap
+        uses: actions/download-artifact@v4
+        with:
+          name: valkey-snap--platform-${{ matrix.platform }}
+
+      - name: Install snap
+        run: sudo snap install --dangerous valkey*.snap
+
+      - name: Start valkey server
+        run: |
+          sudo snap start valkey.server
+          sleep 5
+
+      - name: Run valkey cli info
+        run: valkey.cli info
+
+      - name: Start valkey sentinel
+        run: |
+          sudo snap start valkey.sentinel
+          sleep 5
+
+      - name: Run valkey sentinel info
+        run: valkey.cli -p 26379 sentinel masters

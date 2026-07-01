@@ -1,7 +1,6 @@
 name: valkey
 base: core26
-build-base: devel # can be removed once 26.04 was released to `stable`
-version: "9.0.3"
+version: "9.1.0"
 summary: "Valkey: open source, in memory datastore as a snap" # 79 char long summary
 description: |
   A flexible distributed key-value database that is optimized 
@@ -19,7 +18,7 @@ system-usernames:
 
 apps:
   server:
-    command: usr/bin/valkey-server
+    command: start_valkey.sh
     daemon: simple
     restart-condition: always
     restart-delay: 20s
@@ -59,7 +58,7 @@ apps:
       - network-observe
       - home
   sentinel:
-    command: usr/bin/valkey-sentinel
+    command: start_sentinel.sh
     daemon: simple
     restart-condition: always
     restart-delay: 20s
@@ -73,17 +72,12 @@ apps:
 
 parts:
   valkey:
-    plugin: make
-    source: sourcecraft:valkey
-    source-channel: 9.0-26.04/edge
-    override-build: |
-      mkdir -p ${SNAPCRAFT_PART_INSTALL}/usr
-      mkdir -p ${SNAPCRAFT_PART_INSTALL}/etc
-      make BUILD_TLS=yes
-      PREFIX=${SNAPCRAFT_PART_INSTALL}/usr make BUILD_TLS=yes install
-      cp valkey.conf ${SNAPCRAFT_PART_INSTALL}/etc/
-      cp sentinel.conf ${SNAPCRAFT_PART_INSTALL}/etc/
-    build-packages:
-      - libssl-dev
+    plugin: dump
+    source: bld:valkey
+    source-channel: 9.1-26.04/edge
     stage-packages:
       - util-linux
+
+  local-files:
+    plugin: dump
+    source: snap/local/

@@ -5,19 +5,32 @@ backends:
     type: craft
     systems:
       - ubuntu-26.04
+      # Uncomment to test on more systems
+      #- ubuntu-24.04
+      #- ubuntu-22.04
+      #- ubuntu-20.04
 
 suites:
-  spread/tests/:
+  spread/general/:
     summary: General integration tests
     prepare: |
+      snap install "$CRAFT_ARTIFACT" --dangerous --jailmode
       apt --purge remove valkey*
       snap install snapd  # Ensure snapd 2.74 is installed
       snap refresh snapd  # Ensure snapd 2.74 is installed
       snap install core26 --beta # TODO: remove once core26 latest/stable is out
-    prepare-each: |
-      snap install "$CRAFT_ARTIFACT" --dangerous
       snap start valkey.server
-    restore-each: |
+      retry=0
+      until valkey.cli ping 2>/dev/null | grep -q PONG; do
+        retry=$((retry + 1))
+        if [ $retry -ge 30 ]; then
+          echo "Valkey server did not become ready in time"
+          snap logs valkey.server || true
+          exit 1
+        fi
+        sleep 1
+      done
+    restore: |
       snap remove valkey --purge --terminate
 
 exclude:
