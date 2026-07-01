@@ -7,11 +7,9 @@ on:
         description: "Channel to release to"
         required: true
         default: "9.1-26.04/edge"
-  pull_request:
-  # # TODO ADD When ready to merge
-  # push:
-  #   branches:
-  #     - 9.0-26.04
+  push:
+    branches:
+      - 9.1-26.04
 
 jobs:
   release:
@@ -25,9 +23,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        # TODO remove when ready to merge
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
       - name: Install snapcraft
