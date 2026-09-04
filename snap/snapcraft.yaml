@@ -1,10 +1,10 @@
 name: valkey
 base: core26
 version: "9.1.0"
-summary: "Valkey: open source, in memory datastore as a snap" # 79 char long summary
+summary: "Valkey: open source, in memory datastore as a snap"
 description: |
-  A flexible distributed key-value database that is optimized 
-  for caching and other realtime workloads. Valkey is an open 
+  A flexible distributed key-value database that is optimized
+  for caching and other realtime workloads. Valkey is an open
   source, in memory datastore released under the BSD-3 Clause License.
 
 grade: devel # must be 'stable' to release into candidate/stable channels
@@ -16,10 +16,16 @@ platforms:
 system-usernames:
   snap_daemon: shared
 
+hooks:
+  install:
+    plugs:
+      - mount-observe
+
 apps:
   server:
     command: start_valkey.sh
     daemon: simple
+    install-mode: disable
     restart-condition: always
     restart-delay: 20s
     environment:
@@ -27,39 +33,33 @@ apps:
     plugs:
       - network
       - network-bind
-      - network-observe
-      - home
+      - mount-observe
+      - hardware-observe
   cli:
     command: usr/bin/valkey-cli
     plugs:
       - network
-      - network-bind
-      - network-observe
+      - mount-observe
       - home
   benchmark:
     command: usr/bin/valkey-benchmark
     plugs:
       - network
-      - network-bind
-      - network-observe
-      - home
+      - mount-observe
   check-aof:
     command: usr/bin/valkey-check-aof
     plugs:
-      - network
-      - network-bind
-      - network-observe
       - home
+      - mount-observe
   check-rdb:
     command: usr/bin/valkey-check-rdb
     plugs:
-      - network
-      - network-bind
-      - network-observe
       - home
+      - mount-observe
   sentinel:
     command: start_sentinel.sh
     daemon: simple
+    install-mode: disable
     restart-condition: always
     restart-delay: 20s
     environment:
@@ -67,8 +67,8 @@ apps:
     plugs:
       - network
       - network-bind
-      - network-observe
-      - home
+      - mount-observe
+      - hardware-observe
 
 parts:
   valkey:
@@ -77,7 +77,21 @@ parts:
     source-channel: 9.1-26.04/edge
     stage-packages:
       - util-linux
+    override-stage: |
+      craftctl default
+      # stay under 80 chars
+      lib_path="${CRAFT_STAGE}/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}"
+      lib_path="${lib_path}:${CRAFT_STAGE}/usr/lib"
+      actual=$(LD_LIBRARY_PATH="${lib_path}" \
+        "${CRAFT_STAGE}/usr/bin/valkey-server" --version \
+        | grep -oP '(?<=v=)[0-9.]+')
+      if [ "$actual" != "$CRAFT_PROJECT_VERSION" ]; then
+        echo "ERROR: binary version ($actual) does not match" \
+          "declared version ($CRAFT_PROJECT_VERSION)"
+        exit 1
+      fi
+      echo "Version check passed: $actual"
 
-  local-files:
+  wrapper:
     plugin: dump
-    source: snap/local/
+    source: snap/local

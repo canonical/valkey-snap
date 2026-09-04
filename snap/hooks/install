@@ -1,23 +1,38 @@
 #!/bin/sh -e
 
-# create Valkey's working directory
+# create Valkey's working directories
 DATA="${SNAP_COMMON}"/var/lib/valkey
+LOGS="${SNAP_COMMON}"/var/log/valkey
+RUNS="${SNAP_COMMON}"/var/run/valkey
 CONF="${SNAP_DATA}"/etc/valkey
 mkdir -p "${DATA}"
+mkdir -p "${LOGS}"
+mkdir -p "${RUNS}"
 mkdir -p "${CONF}"
 
 # add default config file
 cp "${SNAP}"/etc/valkey/valkey.conf "${CONF}"/
 cp "${SNAP}"/etc/valkey/sentinel.conf "${CONF}"/
 
+# fix paths that reference system locations to use snap-managed directories
+sed -i "s|^dir /var/lib/valkey|dir ${DATA}|" "${CONF}"/valkey.conf
+sed -i "s|^logfile /var/log/valkey/.*|logfile ${LOGS}/valkey-server.log|" "${CONF}"/valkey.conf
+sed -i "s|^pidfile /run/valkey/.*|pidfile ${RUNS}/valkey-server.pid|" "${CONF}"/valkey.conf
+sed -i "s|^daemonize .*|daemonize no|" "${CONF}"/valkey.conf
+
+sed -i "s|^dir /var/lib/valkey|dir ${DATA}|" "${CONF}"/sentinel.conf
+sed -i "s|^logfile /var/log/valkey/.*|logfile ${LOGS}/valkey-sentinel.log|" "${CONF}"/sentinel.conf
+sed -i "s|^pidfile /run/sentinel/.*|pidfile ${RUNS}/valkey-sentinel.pid|" "${CONF}"/sentinel.conf
+sed -i "s|^daemonize .*|daemonize no|" "${CONF}"/sentinel.conf
+
 # If we just created the directories, we set up permissions
-if [ stat -c '%u' "${DATA}" == 0 ]; then
-    chmod -R 770 "${SNAP_COMMON}"
+if [ "$(stat -c '%u' "${DATA}")" = 0 ]; then
+    chmod -R 770 "${SNAP_COMMON}"/*
 fi
 
-if [ stat -c '%u' "${CONF}" == 0 ]; then
-    chmod -R 770 "${SNAP_DATA}"
+if [ "$(stat -c '%u' "${CONF}")" = 0 ]; then
+    chmod -R 770 "${SNAP_DATA}"/*
 fi
 
-chown -R 584788:584788 "${SNAP_COMMON}"/*
-chown -R 584788:584788 "${SNAP_DATA}"/*
+chown -R 584788:root "${SNAP_COMMON}"/*
+chown -R 584788:root "${SNAP_DATA}"/*
