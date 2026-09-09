@@ -1,0 +1,16 @@
+summary: Valkey snap sentinel test
+
+execute: |
+  echo "Running sentinel test..."
+  snap start valkey.sentinel
+  retry=0
+  until valkey.cli -p 26379 sentinel masters 2>/dev/null; do
+    retry=$((retry + 1))
+    if [ $retry -ge 30 ]; then
+      echo "Valkey sentinel did not become ready in time"
+      snap logs valkey.sentinel || true
+      exit 1
+    fi
+    sleep 1
+  done
+  valkey.cli -p 26379 sentinel masters
